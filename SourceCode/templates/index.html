@@ -1,0 +1,215 @@
+
+<!doctype html>
+<head>
+    <style> #chartDiv {width:100%;}</style>
+    <title>Google Charts with Flask</title>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+         google.charts.load('current', {'packages':['corechart','table']});
+        // Set a callback to run when the Google Visualization API is loaded.
+        google.charts.setOnLoadCallback(googlecharts_is_ready);
+
+        var chart;
+		var chart2;
+        var graphdata;
+		var graphdata2;
+
+        function reset_status_messages(){
+            $("#status").html("")
+			$("#status2").html("")
+        }
+
+        function googlecharts_is_ready(){
+            $("#buttonloadchart").show()
+            $("#buttonloadchart").click()
+            $("#status").html("Google charts is ready")
+        }
+
+        function loadChart(){
+               getData_and_drawChart()    
+        }
+
+        function getData_and_drawChart(){
+            getNewData()
+        }
+
+
+        function getNewData(){
+            $("#status").html("Fetching data to plot graph...");
+
+            jQuery.ajax({
+                url: "/api/getdata" ,
+                type: 'POST',
+                error: function(jqXHR,textStatus, errorThrown ){
+                     console.log("Error while ajax:" + textStatus)
+                },
+                success: function(ndata, textStatus, xhr){ 
+                    //console.log(ndata)
+                    
+                    //console.log(ndata.chart_data)
+                    $("#status").html("Data fetched! Now plotting graph!");
+                    chartdata = ndata.chart_data
+                    graphdata = createDataTable(chartdata)
+                    drawLineChart(graphdata)
+                    drawDataTable(graphdata)
+                    $("#status").html("Graph plotted");
+                }//end success
+            });//end ajax
+          } //end getNewData
+		  
+		  function getNewData2(){
+            $("#status2").html("Fetching data to plot graph...");
+
+            jQuery.ajax({
+                url: "/api/getfandata" ,
+                type: 'POST',
+                error: function(jqXHR,textStatus, errorThrown ){
+                     console.log("Error while ajax:" + textStatus)
+                },
+                success: function(ndata, textStatus, xhr){ 
+                    //console.log(ndata)
+                    
+                    //console.log(ndata.chart_data)
+					chartdata2 = ndata.chart_data
+					graphdata2 = createDataTable2(chartdata2)
+                    drawDataTable2(graphdata2)
+                }//end success
+            });//end ajax
+          } //end getNewData
+		  
+		function turnofffan() {
+            $.ajax({
+                url: "/writeMotor0/motoroff",
+                success: function (result) {
+                    
+                }
+            })
+        }
+
+        function fanspeed1() {
+            $.ajax({
+                url: "/writeMotor1/motorspeed1", 
+				success: function (result){
+                    
+                }
+            })
+        }
+		function fanspeed2() {
+            $.ajax({
+                url: "/writeMotor2/motorspeed2", 
+				success: function (result){
+                    
+                }
+            })
+        }  
+		function fanspeed3() {
+            $.ajax({
+                url: "/writeMotor3/motorspeed3", 
+				success: function (result){
+                    
+                }
+            })
+        }  
+		
+		function takepicture()
+		{
+			$.ajax({
+                url: "/takepicture/picture",
+				success: function (result){
+                    
+                }
+            })
+		}
+		
+		function fanspeed4() {
+            $.ajax({
+                url: "/writeMotor4/motorspeed4",
+				success: function (result){
+                    
+                }
+            })
+        }  
+		
+        function createDataTable(newdata){
+            graphdata = new google.visualization.DataTable();       
+            graphdata.addColumn('string', 'Time');
+            graphdata.addColumn('number', 'Light');
+            var newdata = JSON.parse(newdata);
+            
+            for (index=0;index<newdata.length;index++){
+                
+                datetime = (newdata[index].datetimeid)
+                datetime = datetime.substring(0, 19) //+ "+0000"             
+                jsdatetime = new Date(Date.parse(datetime));
+                jstime = jsdatetime.toLocaleTimeString();
+                light = parseInt(newdata[index].value);
+                graphdata.addRows([[jstime,light]]);
+            }//end for
+            return graphdata
+        }
+		
+		function createDataTable2(newdata2){
+            graphdata2 = new google.visualization.DataTable();       
+            graphdata2.addColumn('string', 'Time');
+            graphdata2.addColumn('string', 'FanLog');
+            var newdata2 = JSON.parse(newdata2);
+            
+            for (index=0;index<newdata2.length;index++){
+                
+                datetime2 = (newdata2[index].datetimeid)
+                datetime2 = datetime2.substring(0, 19) //+ "+0000"             
+                jsdatetime2 = new Date(Date.parse(datetime2));
+                jstime2 = jsdatetime2.toLocaleTimeString();
+                fanlog = newdata2[index].value;
+                graphdata2.addRows([[jstime2,fanlog]]);
+            }//end for
+            return graphdata2
+        }
+        
+        function drawDataTable2(graphdata2){
+            var table2 = new google.visualization.Table(document.getElementById('table_div2'));
+            table2.draw(graphdata2, {showRowNumber: true, width: '100%', height: '100%'});
+    
+        }//end drawTable
+		function drawDataTable(graphdata2){
+            var table = new google.visualization.Table(document.getElementById('table_div'));
+            table.draw(graphdata, {showRowNumber: true, width: '100%', height: '100%'});
+    
+        }//end drawTable
+        function drawLineChart(graphdata) {
+            chart = new google.visualization.LineChart(
+            document.getElementById('chart_div'));
+            chart.draw(graphdata, {legend: 'none', vAxis: {baseline: 0},
+                colors: ['#A0D100']});
+            return 
+        } //end drawChart
+
+        $(document).ready(function(){
+            reset_status_messages()
+			
+            setInterval(function () {
+                loadChart()
+				getNewData2()
+            }, 10000);
+        });
+
+</script>
+
+</head>
+<body>
+        <input id="buttonloadchart" type="button" onclick="loadChart()" value="Update graph">
+        <div id="status"></div>
+        <div id="chart_div" style="width:100%"></div>
+        <div id="table_div" style="width:100%"></div>
+		<input id="fanspeedoff" type="button" onclick="turnofffan()" value="fan off">
+		<input id="fanspeed1" type="button" onclick="fanspeed1()" value="fan speed 1">
+		<input id="fanspeed2" type="button" onclick="fanspeed2()" value="fan speed 2">
+		<input id="fanspeed3" type="button" onclick="fanspeed3()" value="fan speed 3">
+		<input id="fanspeed4" type="button" onclick="fanspeed4()" value="fan speed 4">
+		<input id="takepicture" type="button" onclick="takepicture()" value="takepicture">
+		<div id="table_div2" style="width:100%"></div>
+		
+        
+</body>
+</html>
